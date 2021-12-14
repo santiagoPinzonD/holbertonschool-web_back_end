@@ -1,77 +1,66 @@
-#!/usr/bin/env python3.7
-""" Suite test utils.py
-"""
-import unittest
-from utils import access_nested_map, get_json
-from parameterized import parameterized, param, memoize
-from unittest.mock import patch, Mock
+#!/usr/bin/env python3
+"""test with the unittest"""
+from utils import (access_nested_map, get_json, memoize)
+from unittest import TestCase, mock
+from unittest.mock import patch
+from parameterized import parameterized
 
 
-class TestAccessNestedMap(unittest.TestCase):
-    """ Test Access Nested Map
-    """
-
+class TestAccessNestedMap(TestCase):
+    """class that make test nestedmap"""
     @parameterized.expand([
-        param(1, nested_map={"a": 1}, path=("a",)),
-        param({"b": 2}, nested_map={"a": {"b": 2}}, path=("a",)),
-        param(2, nested_map={"a": {"b": 2}}, path=("a", "b"))
+        ({"a": 1}, ("a",), 1),
+        ({"a": {"b": 2}}, ("a",), {"b": 2}),
+        ({"a": {"b": 2}}, ("a", "b"), 2)
     ])
-    def test_access_nested_map(self, expected, nested_map, path):
-        """ Test utils.access_nested_map """
+    def test_access_nested_map(self, nested_map, path, expected):
+        """test that returns what it is supposed to"""
         self.assertEqual(access_nested_map(nested_map, path), expected)
 
     @parameterized.expand([
-        param(KeyError, nested_map={}, path=("a",)),
-        param(KeyError, nested_map={"a": 1}, path=("a", "b"))
+        ({}, ("a",), "a"),
+        ({"a": 1}, ("a", "b"), "b")
     ])
-    def test_access_nested_map_exception(self, expected, nested_map, path):
-        """ Test utils.access_nested_map with exception"""
-        with self.assertRaises(expected):
+    def test_access_nested_map_exception(self, nested_map, path, expected):
+        """test that raises exception"""
+        with self.assertRaises(KeyError) as e:
             access_nested_map(nested_map, path)
+        self.assertEqual(f"KeyError('{expected}')", repr(e.exception))
 
 
-class TestGetJson(unittest.TestCase):
-    """ Test get json
-    """
-
+class TestGetJson(TestCase):
+    """class that make test get_json"""
     @parameterized.expand([
-        param(test_url="http://example.com", test_payload={"payload": True}),
-        param(test_url="http://holberton.io", test_payload={"payload": False})
+        ("http://example.com", {"payload": True}),
+        ("http://holberton.io", {"payload": False})
     ])
     def test_get_json(self, test_url, test_payload):
-        """ Test utils.get_json """
-        mock_object = Mock()
-        mock_object.json.return_value = test_payload
-
-        with unittest.mock.patch('utils.requests.get',
-                                 return_value=mock_object):
-            response = get_json(test_url)
-
-        self.assertEqual(response, test_payload)
+        """test that returns what it is supposed to"""
+        patchs = {'return_value.json.return_value': test_payload}
+        config = patch('requests.get', **patchs)
+        mock = config.start()
+        self.assertEqual(get_json(test_url), test_payload)
+        mock.assert_called_once()
+        config.stop()
 
 
-class TestMemoize(unittest.TestCase):
-    """ Test Memoize """
-
+class TestMemoize(TestCase):
+    """class that make test memoize"""
     def test_memoize(self):
-        """ Test memoize method """
-
+        """test that returns what it is supposed to"""
         class TestClass:
-            """ Test Class """
-
+            """class that make test memoize"""
             def a_method(self):
-                """ Method a_method """
+                """test that returns what it is supposed to"""
                 return 42
 
             @memoize
             def a_property(self):
-                """ Method a_property """
+                """test that returns what it is supposed to"""
                 return self.a_method()
 
-        with unittest.mock.patch.object(TestClass,
-                                        'a_method',
-                                        return_value=42) as mock_method:
-            test = TestClass()
-            test.a_property
-            test.a_property
-            mock_method.assert_called_once()
+        with patch.object(TestClass, 'a_method') as mock:
+            test_class = TestClass()
+            test_class.a_property()
+            test_class.a_property()
+            mock.assert_called_once()
